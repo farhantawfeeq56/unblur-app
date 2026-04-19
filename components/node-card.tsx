@@ -113,6 +113,7 @@ export function NodeCard({
       {multiline || isInput ? (
         <textarea
           className={cn(
+            "nodrag",
             "w-full resize-none rounded-lg bg-secondary/50 px-3 py-2.5 text-sm text-foreground",
             "placeholder:text-muted-foreground/60 focus:outline-none focus:bg-secondary/80 transition-colors",
             "leading-relaxed",
@@ -127,6 +128,7 @@ export function NodeCard({
       ) : (
         <input
           className={cn(
+            "nodrag",
             "w-full rounded-lg bg-secondary/50 px-3 py-2.5 text-sm text-foreground",
             "placeholder:text-muted-foreground/60 focus:outline-none focus:bg-secondary/80 transition-colors",
           )}
@@ -149,6 +151,7 @@ export function NodeCard({
           onClick={onGenerate}
           disabled={isGenerating || !value.trim()}
           className={cn(
+            "nodrag",
             "mt-1 w-full rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150",
             "bg-foreground text-background",
             "hover:opacity-90 active:scale-[0.98]",

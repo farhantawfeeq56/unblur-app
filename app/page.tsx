@@ -2,8 +2,17 @@
 
 import { useState, useCallback, useMemo } from "react"
 import { NodeCard } from "@/components/node-card"
-import { ConnectorLine } from "@/components/connector-line"
 import { OutputNode } from "@/components/output-node"
+import ReactFlow, {
+  Background,
+  Handle,
+  Position,
+  type Edge,
+  type Node,
+  type NodeProps,
+  type NodeTypes,
+} from "reactflow"
+import "reactflow/dist/style.css"
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -19,6 +28,77 @@ interface OutputData {
   productSummary: string
   userFlow: { step: string; description: string }[]
   buildPrompt: string
+}
+
+interface FlowCardNodeData {
+  label: string
+  value: string
+  onChange: (val: string) => void
+  placeholder?: string
+  multiline?: boolean
+  isInput?: boolean
+  onGenerate?: () => void
+  isGenerating?: boolean
+  showClarity?: boolean
+  showLeftHandle?: boolean
+  showRightHandle?: boolean
+}
+
+interface FlowOutputNodeData {
+  output: OutputData | null
+  showLeftHandle?: boolean
+}
+
+function FlowCardNode({ data }: NodeProps<FlowCardNodeData>) {
+  return (
+    <>
+      {data.showLeftHandle && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ width: 8, height: 8, background: "transparent", border: "none" }}
+        />
+      )}
+      <NodeCard
+        label={data.label}
+        value={data.value}
+        onChange={data.onChange}
+        placeholder={data.placeholder}
+        multiline={data.multiline}
+        isInput={data.isInput}
+        onGenerate={data.onGenerate}
+        isGenerating={data.isGenerating}
+        showClarity={data.showClarity}
+      />
+      {data.showRightHandle && (
+        <Handle
+          type="source"
+          position={Position.Right}
+          style={{ width: 8, height: 8, background: "transparent", border: "none" }}
+        />
+      )}
+    </>
+  )
+}
+
+function FlowOutputNode({ data }: NodeProps<FlowOutputNodeData>) {
+  return (
+    <>
+      {data.showLeftHandle && (
+        <Handle
+          type="target"
+          position={Position.Left}
+          style={{ width: 8, height: 8, background: "transparent", border: "none" }}
+        />
+      )}
+      <OutputNode output={data.output} />
+    </>
+  )
+}
+
+const nodeTypes: NodeTypes = {
+  flowCard: FlowCardNode,
+  flowOutput: FlowOutputNode,
 }
 
 // ─── Generation logic (no backend, pure text processing) ──────────────────────
@@ -189,6 +269,137 @@ export default function UnblurPage() {
   }
 
   const hasAnyMiddleNode = nodes.problem || nodes.user || nodes.coreAction || nodes.constraints
+  const flowNodes = useMemo<Node<FlowCardNodeData | FlowOutputNodeData>[]>(
+    () => [
+      {
+        id: "input",
+        type: "flowCard",
+        position: { x: 0, y: 0 },
+        data: {
+          label: "Input",
+          value: nodes.input,
+          onChange: updateNode("input"),
+          placeholder: "Dump messy thinking...",
+          isInput: true,
+          onGenerate: handleGenerate,
+          isGenerating,
+          showClarity: false,
+          showRightHandle: true,
+        },
+      },
+      {
+        id: "problem",
+        type: "flowCard",
+        position: { x: 360, y: 0 },
+        data: {
+          label: "What is broken?",
+          value: nodes.problem,
+          onChange: updateNode("problem"),
+          placeholder: "Define the core problem...",
+          multiline: true,
+          showClarity: true,
+          showLeftHandle: true,
+          showRightHandle: true,
+        },
+      },
+      {
+        id: "user",
+        type: "flowCard",
+        position: { x: 680, y: 0 },
+        data: {
+          label: "Who is this for?",
+          value: nodes.user,
+          onChange: updateNode("user"),
+          placeholder: "Describe your target user...",
+          showClarity: true,
+          showLeftHandle: true,
+          showRightHandle: true,
+        },
+      },
+      {
+        id: "coreAction",
+        type: "flowCard",
+        position: { x: 1000, y: 0 },
+        data: {
+          label: "What does user do?",
+          value: nodes.coreAction,
+          onChange: updateNode("coreAction"),
+          placeholder: "Describe the core user action...",
+          showClarity: true,
+          showLeftHandle: true,
+          showRightHandle: true,
+        },
+      },
+      {
+        id: "constraints",
+        type: "flowCard",
+        position: { x: 1320, y: 0 },
+        data: {
+          label: "What should be excluded?",
+          value: nodes.constraints,
+          onChange: updateNode("constraints"),
+          placeholder: "List what to leave out...",
+          showClarity: true,
+          showLeftHandle: true,
+          showRightHandle: true,
+        },
+      },
+      {
+        id: "output",
+        type: "flowOutput",
+        position: { x: 1680, y: 0 },
+        data: {
+          output,
+          showLeftHandle: true,
+        },
+      },
+    ],
+    [nodes, output, updateNode, handleGenerate, isGenerating],
+  )
+
+  const flowEdges = useMemo<Edge[]>(
+    () => [
+      {
+        id: "input-problem",
+        source: "input",
+        target: "problem",
+        type: "smoothstep",
+        style: { stroke: nodes.input.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
+      },
+      {
+        id: "problem-user",
+        source: "problem",
+        target: "user",
+        type: "smoothstep",
+        style: { stroke: nodes.problem.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
+      },
+      {
+        id: "user-coreAction",
+        source: "user",
+        target: "coreAction",
+        type: "smoothstep",
+        style: { stroke: nodes.user.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
+      },
+      {
+        id: "coreAction-constraints",
+        source: "coreAction",
+        target: "constraints",
+        type: "smoothstep",
+        style: {
+          stroke: nodes.coreAction.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)",
+          strokeWidth: 1,
+        },
+      },
+      {
+        id: "constraints-output",
+        source: "constraints",
+        target: "output",
+        type: "smoothstep",
+        style: { stroke: hasAnyMiddleNode ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
+      },
+    ],
+    [nodes.input, nodes.problem, nodes.user, nodes.coreAction, hasAnyMiddleNode],
+  )
 
   return (
     <main className="min-h-screen flex flex-col">
@@ -211,72 +422,23 @@ export default function UnblurPage() {
         </button>
       </header>
 
-      {/* Node chain — horizontally scrollable */}
-      <div className="flex-1 flex items-center overflow-x-auto">
-        <div className="flex items-start gap-0 px-8 py-10 mx-auto">
-
-          {/* 1. Input Node */}
-          <NodeCard
-            label="Input"
-            value={nodes.input}
-            onChange={updateNode("input")}
-            placeholder="Dump messy thinking..."
-            isInput
-            onGenerate={handleGenerate}
-            isGenerating={isGenerating}
-            showClarity={false}
-          />
-
-          <ConnectorLine active={!!nodes.input.trim()} />
-
-          {/* 2. Problem Node */}
-          <NodeCard
-            label="What is broken?"
-            value={nodes.problem}
-            onChange={updateNode("problem")}
-            placeholder="Define the core problem..."
-            multiline
-            showClarity
-          />
-
-          <ConnectorLine active={!!nodes.problem.trim()} />
-
-          {/* 3. User Node */}
-          <NodeCard
-            label="Who is this for?"
-            value={nodes.user}
-            onChange={updateNode("user")}
-            placeholder="Describe your target user..."
-            showClarity
-          />
-
-          <ConnectorLine active={!!nodes.user.trim()} />
-
-          {/* 4. Core Action Node */}
-          <NodeCard
-            label="What does user do?"
-            value={nodes.coreAction}
-            onChange={updateNode("coreAction")}
-            placeholder="Describe the core user action..."
-            showClarity
-          />
-
-          <ConnectorLine active={!!nodes.coreAction.trim()} />
-
-          {/* 5. Constraints Node */}
-          <NodeCard
-            label="What should be excluded?"
-            value={nodes.constraints}
-            onChange={updateNode("constraints")}
-            placeholder="List what to leave out..."
-            showClarity
-          />
-
-          <ConnectorLine active={!!hasAnyMiddleNode} />
-
-          {/* 6. Output Node */}
-          <OutputNode output={output} />
-        </div>
+      {/* Node canvas */}
+      <div className="flex-1">
+        <ReactFlow
+          nodes={flowNodes}
+          edges={flowEdges}
+          nodeTypes={nodeTypes}
+          nodesDraggable
+          nodesConnectable={false}
+          elementsSelectable={false}
+          minZoom={0.5}
+          maxZoom={1.5}
+          defaultViewport={{ x: 60, y: 110, zoom: 1 }}
+          attributionPosition="bottom-left"
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={20} size={1} color="oklch(0.922 0 0)" />
+        </ReactFlow>
       </div>
 
       {/* Footer hint */}
