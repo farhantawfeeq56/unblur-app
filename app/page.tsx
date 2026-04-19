@@ -446,7 +446,7 @@ export default function UnblurPage() {
           fitViewOptions={{ duration: 500, padding: 0.15 }}
           nodesConnectable={false}
           elementsSelectable={false}
-          minZoom={0.6}
+          minZoom={0.35}
           maxZoom={1.4}
           zoomOnScroll
           zoomOnPinch
