@@ -443,10 +443,18 @@ export default function UnblurPage() {
           nodeTypes={nodeTypes}
           nodesDraggable
           fitView
+          fitViewOptions={{ duration: 500, padding: 0.15 }}
           nodesConnectable={false}
           elementsSelectable={false}
-          minZoom={0.5}
-          maxZoom={1.5}
+          minZoom={0.6}
+          maxZoom={1.4}
+          zoomOnScroll
+          zoomOnPinch
+          zoomOnDoubleClick={false}
+          panOnDrag
+          panOnScroll
+          panOnScrollMode="free"
+          panOnScrollSpeed={0.75}
           attributionPosition="bottom-left"
           proOptions={{ hideAttribution: true }}
         >
