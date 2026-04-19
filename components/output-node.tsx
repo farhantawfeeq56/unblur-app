@@ -49,7 +49,7 @@ export function OutputNode({ output }: OutputNodeProps) {
         {output && (
           <button
             onClick={handleCopy}
-            className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            className="nodrag text-[11px] text-muted-foreground hover:text-foreground transition-colors"
           >
             {copied ? "Copied" : "Copy"}
           </button>
