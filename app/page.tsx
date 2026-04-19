@@ -51,7 +51,7 @@ interface FlowOutputNodeData {
 
 function FlowCardNode({ data }: NodeProps<FlowCardNodeData>) {
   return (
-    <>
+    <div>
       {data.showLeftHandle && (
         <Handle
           type="target"
@@ -77,13 +77,13 @@ function FlowCardNode({ data }: NodeProps<FlowCardNodeData>) {
           style={{ width: 8, height: 8, background: "transparent", border: "none" }}
         />
       )}
-    </>
+    </div>
   )
 }
 
 function FlowOutputNode({ data }: NodeProps<FlowOutputNodeData>) {
   return (
-    <>
+    <div>
       {data.showLeftHandle && (
         <Handle
           type="target"
@@ -92,7 +92,7 @@ function FlowOutputNode({ data }: NodeProps<FlowOutputNodeData>) {
         />
       )}
       <OutputNode output={data.output} />
-    </>
+    </div>
   )
 }
 
@@ -356,6 +356,19 @@ export default function UnblurPage() {
     ],
     [nodes, output, updateNode, handleGenerate, isGenerating],
   )
+  const testNodes: Node[] = useMemo(
+    () => [
+      {
+        id: "test",
+        type: "default",
+        position: { x: 100, y: 100 },
+        data: { label: "TEST NODE" },
+      },
+    ],
+    [],
+  )
+
+  console.log("FLOW NODES:", flowNodes)
 
   const flowEdges = useMemo<Edge[]>(
     () => [
@@ -423,10 +436,10 @@ export default function UnblurPage() {
       </header>
 
       {/* Node canvas */}
-      <div className="flex-1 h-[calc(100vh-120px)]">
+      <div className="w-screen h-screen">
         <ReactFlow
-          nodes={flowNodes}
-          edges={flowEdges}
+          nodes={flowNodes.length ? flowNodes : testNodes}
+          edges={flowNodes.length ? flowEdges : []}
           nodeTypes={nodeTypes}
           nodesDraggable
           fitView
@@ -434,7 +447,6 @@ export default function UnblurPage() {
           elementsSelectable={false}
           minZoom={0.5}
           maxZoom={1.5}
-          defaultViewport={{ x: 60, y: 110, zoom: 1 }}
           attributionPosition="bottom-left"
           proOptions={{ hideAttribution: true }}
         >
