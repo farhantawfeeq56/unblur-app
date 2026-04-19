@@ -423,12 +423,13 @@ export default function UnblurPage() {
       </header>
 
       {/* Node canvas */}
-      <div className="flex-1">
+      <div className="flex-1 h-[calc(100vh-120px)]">
         <ReactFlow
           nodes={flowNodes}
           edges={flowEdges}
           nodeTypes={nodeTypes}
           nodesDraggable
+          fitView
           nodesConnectable={false}
           elementsSelectable={false}
           minZoom={0.5}
