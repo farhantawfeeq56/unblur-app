@@ -27,7 +27,7 @@ export function OutputNode({ data }: OutputNodeProps) {
   const buildPrompt = `Build a clarity-focused product concept for ${user}.\nProblem to solve: ${problem}.\nCore action: ${action}.\nDesired outcome: ${outcome}.\nConstraints: ${constraints}.\nGenerate a concise plan with assumptions, flow, and risks.`
 
   return (
-    <div className={cn("relative flex w-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm", "min-w-[320px]")}>
+    <div className={cn("relative flex w-full flex-col gap-3 rounded-xl border bg-card p-4", "min-w-[320px]")}>
       <Handle type="target" position={Position.Top} />
 
       <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground select-none">Output</div>

@@ -9,7 +9,8 @@ import ReactFlow, {
   useNodesState, 
   type NodeChange,
   ReactFlowProvider,
-  useReactFlow
+  useReactFlow,
+  useViewport
 } from "reactflow"
 
 import { ReactFlowClarityNode } from "@/components/reactflow-clarity-node"
@@ -18,11 +19,14 @@ import { evaluateUserClarity, USER_SUGGESTIONS } from "@/components/user-clarity
 import { DataProvider } from "@/components/data-context"
 import { CanvasNodeData } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Sparkles } from "lucide-react"
+import { Maximize } from "lucide-react"
 
 const INPUT_NODES = ["user", "problem", "action", "constraints", "outcome"]
 const CLARITY_NODE_WIDTH = 320
 const OUTPUT_NODE_WIDTH = 420
+
+const WORKING_PADDING = 0.3
+const FOCUS_PADDING = 0.8
 
 const yById = {
   user: 0,
@@ -57,7 +61,6 @@ const initialEdges: Edge[] = [
   style: {
     stroke: "url(#edge-gradient)",
     strokeWidth: 2,
-    opacity: 0.7,
   },
 }))
 
@@ -141,7 +144,8 @@ const initialNodes: Node<CanvasNodeData>[] = [
 function UnblurCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNodeData>(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
-  const { setViewport, fitView } = useReactFlow()
+  const { fitView } = useReactFlow()
+  const { zoom } = useViewport()
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -150,27 +154,44 @@ function UnblurCanvas() {
     [onNodesChange],
   )
 
-  const alignNodes = useCallback(() => {
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        position: {
-          x: getNodeX(node.id, LAYOUT_WIDTH),
-          y: yById[node.id as keyof typeof yById] ?? node.position.y,
-        },
-      }))
-    )
-    // Small delay to ensure React Flow has updated node positions before fitting view
-    setTimeout(() => fitView({ duration: 400, padding: 0.3 }), 50)
-  }, [setNodes, fitView])
+  const handleResetView = useCallback(() => {
+    fitView({ duration: 600, padding: WORKING_PADDING })
+  }, [fitView])
+
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      fitView({ nodes: [node], padding: FOCUS_PADDING, duration: 600 })
+    },
+    [fitView]
+  )
+
+  const handlePaneClick = useCallback(() => {
+    handleResetView()
+  }, [handleResetView])
+
+  const visualStyle = useMemo(() => {
+    const edgeOpacity = Math.min(1.0, Math.max(0.2, 0.3 + (zoom - 0.5) * 0.7))
+    const shadowIntensity = Math.min(0.3, Math.max(0.05, 0.1 + (zoom - 0.7) * 0.4))
+    const shadowBlur = Math.max(2, 3 + (zoom - 0.7) * 10)
+    
+    return {
+      "--edge-opacity": edgeOpacity.toString(),
+      "--node-shadow": `0 ${shadowBlur / 2}px ${shadowBlur}px rgba(0,0,0,${shadowIntensity})`,
+    } as React.CSSProperties
+  }, [zoom])
 
   useEffect(() => {
-    alignNodes()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    // Initial comfortable view
+    setTimeout(() => {
+      fitView({ duration: 800, padding: WORKING_PADDING })
+    }, 100)
+  }, [fitView])
 
   return (
-    <div className="flex h-full w-full min-w-[1200px] flex-col overflow-hidden">
+    <div 
+      className="flex h-full w-full min-w-[1200px] flex-col overflow-hidden"
+      style={visualStyle}
+    >
       <header className="flex shrink-0 items-center justify-between px-6 py-4 bg-background/50 backdrop-blur-md border-b">
         <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
           Unblurr
@@ -178,11 +199,11 @@ function UnblurCanvas() {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={alignNodes}
+          onClick={handleResetView}
           className="gap-2 shadow-sm hover:shadow-md transition-all"
         >
-          <Sparkles className="h-4 w-4" />
-          Align Canvas
+          <Maximize className="h-4 w-4" />
+          Reset View
         </Button>
       </header>
 
@@ -192,6 +213,8 @@ function UnblurCanvas() {
           edges={edges}
           onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodeClick={handleNodeClick}
+          onPaneClick={handlePaneClick}
           nodeTypes={nodeTypes}
           nodesDraggable
           nodesConnectable={false}
@@ -199,8 +222,6 @@ function UnblurCanvas() {
           zoomOnScroll
           panOnDrag
           className="h-full w-full"
-          fitView
-          fitViewOptions={{ padding: 0.3 }}
         >
           <svg className="pointer-events-none absolute h-0 w-0" aria-hidden>
             <defs>
