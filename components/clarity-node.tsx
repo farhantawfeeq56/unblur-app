@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { Handle, Position } from "reactflow"
 import { cn } from "@/lib/utils"
 
 export type ClarityState = "empty" | "weak" | "medium" | "strong"
@@ -31,7 +32,10 @@ export function ClarityNode({ title, value, onChange, placeholder, evaluator, su
   const result = useMemo(() => evaluator?.(value), [evaluator, value])
 
   return (
-    <div className="w-full rounded-xl border bg-card p-4 shadow-sm">
+    <div className="relative w-full rounded-xl border bg-card p-4 shadow-sm">
+      <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
+
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">{title}</h2>
         {result && (
@@ -45,7 +49,7 @@ export function ClarityNode({ title, value, onChange, placeholder, evaluator, su
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="nodrag min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
       />
 
       {result && <p className="mt-2 text-xs text-foreground">{result.feedback}</p>}
@@ -57,7 +61,7 @@ export function ClarityNode({ title, value, onChange, placeholder, evaluator, su
               key={suggestion}
               type="button"
               onClick={() => onChange(suggestion)}
-              className="rounded-full border border-border px-2.5 py-1 text-xs text-foreground hover:bg-secondary"
+              className="nodrag rounded-full border border-border px-2.5 py-1 text-xs text-foreground hover:bg-secondary"
             >
               {suggestion}
             </button>
