@@ -12,9 +12,9 @@ interface ClarityResult {
 }
 
 const GENERIC_WORDS = ["people", "users", "everyone", "anyone"]
-const SLIGHTLY_SPECIFIC_WORDS = ["students", "developers", "designers", "founders"]
-const ROLE_WORDS = ["founders", "developers", "designers", "students"]
-const QUALIFIER_WORDS = ["saas", "ai", "early-stage", "b2b"]
+const SLIGHTLY_SPECIFIC_WORDS = ["student", "students", "developer", "developers", "designer", "designers", "founder", "founders"]
+const ROLE_WORDS = ["founder", "founders", "developer", "developers", "designer", "designers", "student", "students"]
+const QUALIFIER_WORDS = ["saas", "ai", "early", "stage", "b2b"]
 
 const SUGGESTIONS = [
   "SaaS founders (B2B tools)",
@@ -24,7 +24,8 @@ const SUGGESTIONS = [
 ]
 
 function includesAnyWord(input: string, words: string[]): boolean {
-  return words.some((word) => input.includes(word))
+  const tokens = input.split(/\W+/).filter(Boolean)
+  return words.some((word) => tokens.includes(word))
 }
 
 export function evaluateUserClarity(text: string): ClarityResult {
@@ -36,14 +37,6 @@ export function evaluateUserClarity(text: string): ClarityResult {
       score: 0,
       state: "empty",
       feedback: "Start by describing who this is for.",
-    }
-  }
-
-  if (input.length < 15) {
-    return {
-      score: 20,
-      state: "weak",
-      feedback: "Too vague. Who exactly?",
     }
   }
 
@@ -70,7 +63,15 @@ export function evaluateUserClarity(text: string): ClarityResult {
     return {
       score: 60,
       state: "medium",
-      feedback: "Better. Can you narrow this down further?",
+      feedback: "Which type exactly? (e.g., SaaS, AI, early-stage)",
+    }
+  }
+
+  if (input.length < 15) {
+    return {
+      score: 20,
+      state: "weak",
+      feedback: "Too vague. Who exactly?",
     }
   }
 
@@ -106,7 +107,7 @@ export function UserClarityNode() {
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Describe your target user..."
-          className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none"
+          className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
 
         <p className="mt-2 text-xs">{result.feedback}</p>
@@ -125,10 +126,6 @@ export function UserClarityNode() {
         </div>
       </div>
 
-      <div className="text-sm">
-        <p>Clarity Score: {result.score}%</p>
-        <p>{result.feedback}</p>
-      </div>
     </div>
   )
 }
