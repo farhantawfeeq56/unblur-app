@@ -1,473 +1,239 @@
 "use client"
 
-import { useState, useCallback, useMemo } from "react"
-import { NodeCard } from "@/components/node-card"
-import { OutputNode } from "@/components/output-node"
-import ReactFlow, {
-  Background,
-  Handle,
-  Position,
-  type Edge,
-  type Node,
-  type NodeProps,
-  type NodeTypes,
-} from "reactflow"
+import { useMemo, useState } from "react"
+import ReactFlow, { Background, type Node, type NodeProps, type NodeTypes } from "reactflow"
+import { ClarityNode, type ClarityResult } from "@/components/clarity-node"
+import { USER_SUGGESTIONS, evaluateUserClarity } from "@/components/user-clarity-node"
+import { cn } from "@/lib/utils"
 import "reactflow/dist/style.css"
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface NodeState {
-  input: string
-  problem: string
+interface UnblurData {
   user: string
-  coreAction: string
+  problem: string
+  action: string
   constraints: string
+  outcome: string
 }
 
-interface OutputData {
-  productSummary: string
-  userFlow: { step: string; description: string }[]
-  buildPrompt: string
-}
-
-interface FlowCardNodeData {
-  label: string
+interface ClarityFlowNodeData {
+  title: string
   value: string
-  onChange: (val: string) => void
+  onChange: (value: string) => void
+  evaluator: (value: string) => ClarityResult
+  suggestions?: string[]
   placeholder?: string
-  multiline?: boolean
-  isInput?: boolean
-  onGenerate?: () => void
-  isGenerating?: boolean
-  showClarity?: boolean
-  showLeftHandle?: boolean
-  showRightHandle?: boolean
 }
 
-interface FlowOutputNodeData {
-  output: OutputData | null
-  showLeftHandle?: boolean
+function createBasicEvaluator(label: string): (value: string) => ClarityResult {
+  return (value: string) => {
+    const input = value.trim()
+
+    if (!input) {
+      return { score: 0, state: "empty", feedback: `Add ${label.toLowerCase()} details.` }
+    }
+
+    if (input.length < 12) {
+      return { score: 35, state: "weak", feedback: `Too vague. Clarify the ${label.toLowerCase()}.` }
+    }
+
+    if (input.length < 30) {
+      return { score: 65, state: "medium", feedback: `Good start. Add more specifics to the ${label.toLowerCase()}.` }
+    }
+
+    return { score: 85, state: "strong", feedback: `${label} looks clear.` }
+  }
 }
 
-function FlowCardNode({ data }: NodeProps<FlowCardNodeData>) {
+const evaluateProblemClarity = createBasicEvaluator("Problem")
+const evaluateActionClarity = createBasicEvaluator("Core Action")
+const evaluateConstraintsClarity = createBasicEvaluator("Constraints")
+const evaluateOutcomeClarity = createBasicEvaluator("Outcome")
+
+function FlowClarityNode({ data }: NodeProps<ClarityFlowNodeData>) {
   return (
-    <div>
-      {data.showLeftHandle && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          style={{ width: 8, height: 8, background: "transparent", border: "none" }}
-        />
-      )}
-      <NodeCard
-        label={data.label}
+    <div className="w-[320px]">
+      <ClarityNode
+        title={data.title}
         value={data.value}
         onChange={data.onChange}
+        evaluator={data.evaluator}
+        suggestions={data.suggestions}
         placeholder={data.placeholder}
-        multiline={data.multiline}
-        isInput={data.isInput}
-        onGenerate={data.onGenerate}
-        isGenerating={data.isGenerating}
-        showClarity={data.showClarity}
       />
-      {data.showRightHandle && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          style={{ width: 8, height: 8, background: "transparent", border: "none" }}
-        />
-      )}
-    </div>
-  )
-}
-
-function FlowOutputNode({ data }: NodeProps<FlowOutputNodeData>) {
-  return (
-    <div>
-      {data.showLeftHandle && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          style={{ width: 8, height: 8, background: "transparent", border: "none" }}
-        />
-      )}
-      <OutputNode output={data.output} />
     </div>
   )
 }
 
 const nodeTypes: NodeTypes = {
-  flowCard: FlowCardNode,
-  flowOutput: FlowOutputNode,
+  clarityNode: FlowClarityNode,
 }
-
-// ─── Generation logic (no backend, pure text processing) ──────────────────────
-
-function extractKeyPhrase(text: string): string {
-  const cleaned = text.trim().replace(/\s+/g, " ")
-  const sentences = cleaned.split(/[.!?\n]/).map((s) => s.trim()).filter(Boolean)
-  return sentences[0] || cleaned.slice(0, 80)
-}
-
-function inferProblem(input: string): string {
-  const lower = input.toLowerCase()
-  if (lower.includes("confus") || lower.includes("unclear") || lower.includes("messy")) {
-    return "Lack of structure and clarity in the process"
-  }
-  if (lower.includes("slow") || lower.includes("time") || lower.includes("fast")) {
-    return "Time-consuming manual work that slows teams down"
-  }
-  if (lower.includes("collaborat") || lower.includes("team") || lower.includes("together")) {
-    return "Poor collaboration and shared understanding between team members"
-  }
-  if (lower.includes("track") || lower.includes("monitor") || lower.includes("measure")) {
-    return "Difficulty tracking progress and measuring outcomes"
-  }
-  if (lower.includes("build") || lower.includes("product") || lower.includes("ship")) {
-    return "No clear path from idea to shippable product"
-  }
-  if (lower.includes("communicat") || lower.includes("share") || lower.includes("align")) {
-    return "Misalignment and poor communication across stakeholders"
-  }
-  const key = extractKeyPhrase(input)
-  return `No structured approach to: ${key.slice(0, 60)}`
-}
-
-function inferUser(input: string): string {
-  const lower = input.toLowerCase()
-  if (lower.includes("designer") || lower.includes("design team")) return "Product designers and design leads"
-  if (lower.includes("developer") || lower.includes("engineer") || lower.includes("dev team"))
-    return "Software developers and engineering teams"
-  if (lower.includes("founder") || lower.includes("startup")) return "Early-stage founders and solo builders"
-  if (lower.includes("manager") || lower.includes("pm") || lower.includes("product manager"))
-    return "Product managers and team leads"
-  if (lower.includes("student") || lower.includes("learn")) return "Students and self-learners"
-  if (lower.includes("team") || lower.includes("company") || lower.includes("org"))
-    return "Teams building internal tools or products"
-  if (lower.includes("creator") || lower.includes("content")) return "Content creators and indie makers"
-  return "Teams and individuals building digital products"
-}
-
-function inferCoreAction(input: string): string {
-  const lower = input.toLowerCase()
-  if (lower.includes("plan") || lower.includes("roadmap")) return "Plan and prioritize features on a shared roadmap"
-  if (lower.includes("write") || lower.includes("document") || lower.includes("spec"))
-    return "Write and refine product specs collaboratively"
-  if (lower.includes("track") || lower.includes("progress")) return "Track progress and surface blockers in real time"
-  if (lower.includes("idea") || lower.includes("brainstorm")) return "Capture and structure ideas into actionable plans"
-  if (lower.includes("review") || lower.includes("feedback")) return "Review work and give structured feedback"
-  if (lower.includes("analys") || lower.includes("data") || lower.includes("insight"))
-    return "Analyze data and extract actionable insights"
-  if (lower.includes("design") || lower.includes("prototype")) return "Design and prototype product flows quickly"
-  return "Transform unstructured thinking into a clear action plan"
-}
-
-function inferConstraints(input: string): string {
-  const lower = input.toLowerCase()
-  const constraints: string[] = []
-  if (lower.includes("no code") || lower.includes("non-technical")) constraints.push("no coding required")
-  if (lower.includes("simple") || lower.includes("minimal")) constraints.push("no complex setup or configuration")
-  if (lower.includes("free") || lower.includes("cost")) constraints.push("no paid plans or paywalls")
-  if (lower.includes("mobile") || lower.includes("phone")) constraints.push("no desktop-only features")
-  if (lower.includes("team") || lower.includes("collaborat")) constraints.push("no single-user limitations")
-  if (constraints.length === 0) {
-    constraints.push("no unnecessary complexity", "no steep learning curve")
-  }
-  return constraints.join(", ")
-}
-
-function buildOutput(nodes: NodeState): OutputData {
-  const { problem, user, coreAction, constraints } = nodes
-
-  const p = problem.trim() || "an undefined problem"
-  const u = user.trim() || "unspecified users"
-  const a = coreAction.trim() || "take action"
-  const c = constraints.trim() || "no stated constraints"
-
-  const productSummary = `This is a tool for ${u} to ${a}, solving ${p} — within the bounds of: ${c}.`
-
-  const userFlow = [
-    {
-      step: "Entry",
-      description: `${u.split(" ")[0] || "User"} arrives with a rough idea or existing problem they need to address.`,
-    },
-    {
-      step: "Action",
-      description: `They ${a.replace(/^to\s+/i, "").toLowerCase()} using the tool's core workflow.`,
-    },
-    {
-      step: "Outcome",
-      description: `The problem — ${p.toLowerCase()} — is resolved, within the constraint that ${c}.`,
-    },
-  ]
-
-  const buildPrompt = `Build a web app with the following spec:
-
-WHAT TO BUILD:
-A tool that helps ${u} to ${a}.
-
-KEY FEATURES:
-- Core workflow: ${a}
-- Target user: ${u}
-- Problem being solved: ${p}
-
-CONSTRAINTS:
-- Exclude: ${c}
-- Keep the UI minimal and focused
-- No unnecessary onboarding or complex configuration
-
-GOAL:
-The user opens the app, immediately understands the core action, and completes the flow without friction.`
-
-  return { productSummary, userFlow, buildPrompt }
-}
-
-// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function UnblurPage() {
-  const [nodes, setNodes] = useState<NodeState>({
-    input: "",
-    problem: "",
+  const [data, setData] = useState<UnblurData>({
     user: "",
-    coreAction: "",
+    problem: "",
+    action: "",
     constraints: "",
+    outcome: "",
   })
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [hasGenerated, setHasGenerated] = useState(false)
+  const [buildPrompt, setBuildPrompt] = useState("")
 
-  const updateNode = useCallback(
-    (key: keyof NodeState) => (val: string) => {
-      setNodes((prev) => ({ ...prev, [key]: val }))
-    },
-    [],
-  )
-
-  // Live output: updates whenever any middle node changes (after first generation)
-  const output = useMemo<OutputData | null>(() => {
-    if (!hasGenerated) return null
-    const hasContent = nodes.problem || nodes.user || nodes.coreAction || nodes.constraints
-    if (!hasContent) return null
-    return buildOutput(nodes)
-  }, [nodes, hasGenerated])
-
-  const handleGenerate = () => {
-    if (!nodes.input.trim()) return
-    setIsGenerating(true)
-
-    // Simulate slight async feel
-    setTimeout(() => {
-      setNodes((prev) => ({
-        ...prev,
-        problem: inferProblem(prev.input),
-        user: inferUser(prev.input),
-        coreAction: inferCoreAction(prev.input),
-        constraints: inferConstraints(prev.input),
-      }))
-      setHasGenerated(true)
-      setIsGenerating(false)
-    }, 600)
-  }
-
-  const hasAnyMiddleNode = nodes.problem || nodes.user || nodes.coreAction || nodes.constraints
-  const flowNodes = useMemo<Node<FlowCardNodeData | FlowOutputNodeData>[]>(
+  const nodes = useMemo<Node<ClarityFlowNodeData>[]>(
     () => [
       {
-        id: "input",
-        type: "flowCard",
+        id: "user",
+        type: "clarityNode",
         position: { x: 0, y: 0 },
         data: {
-          label: "Input",
-          value: nodes.input,
-          onChange: updateNode("input"),
-          placeholder: "Dump messy thinking...",
-          isInput: true,
-          onGenerate: handleGenerate,
-          isGenerating,
-          showClarity: false,
-          showRightHandle: true,
+          title: "User",
+          value: data.user,
+          onChange: (val) => setData((prev) => ({ ...prev, user: val })),
+          evaluator: evaluateUserClarity,
+          suggestions: USER_SUGGESTIONS,
+          placeholder: "Describe your target user...",
         },
       },
       {
         id: "problem",
-        type: "flowCard",
-        position: { x: 360, y: 0 },
+        type: "clarityNode",
+        position: { x: 0, y: 150 },
         data: {
-          label: "What is broken?",
-          value: nodes.problem,
-          onChange: updateNode("problem"),
+          title: "Problem",
+          value: data.problem,
+          onChange: (val) => setData((prev) => ({ ...prev, problem: val })),
+          evaluator: evaluateProblemClarity,
           placeholder: "Define the core problem...",
-          multiline: true,
-          showClarity: true,
-          showLeftHandle: true,
-          showRightHandle: true,
         },
       },
       {
-        id: "user",
-        type: "flowCard",
-        position: { x: 680, y: 0 },
+        id: "action",
+        type: "clarityNode",
+        position: { x: 0, y: 300 },
         data: {
-          label: "Who is this for?",
-          value: nodes.user,
-          onChange: updateNode("user"),
-          placeholder: "Describe your target user...",
-          showClarity: true,
-          showLeftHandle: true,
-          showRightHandle: true,
-        },
-      },
-      {
-        id: "coreAction",
-        type: "flowCard",
-        position: { x: 1000, y: 0 },
-        data: {
-          label: "What does user do?",
-          value: nodes.coreAction,
-          onChange: updateNode("coreAction"),
-          placeholder: "Describe the core user action...",
-          showClarity: true,
-          showLeftHandle: true,
-          showRightHandle: true,
+          title: "Core Action",
+          value: data.action,
+          onChange: (val) => setData((prev) => ({ ...prev, action: val })),
+          evaluator: evaluateActionClarity,
+          placeholder: "What does the user do?",
         },
       },
       {
         id: "constraints",
-        type: "flowCard",
-        position: { x: 1320, y: 0 },
+        type: "clarityNode",
+        position: { x: 0, y: 450 },
         data: {
-          label: "What should be excluded?",
-          value: nodes.constraints,
-          onChange: updateNode("constraints"),
-          placeholder: "List what to leave out...",
-          showClarity: true,
-          showLeftHandle: true,
-          showRightHandle: true,
+          title: "Constraints",
+          value: data.constraints,
+          onChange: (val) => setData((prev) => ({ ...prev, constraints: val })),
+          evaluator: evaluateConstraintsClarity,
+          placeholder: "What constraints apply?",
         },
       },
       {
-        id: "output",
-        type: "flowOutput",
-        position: { x: 1680, y: 0 },
+        id: "outcome",
+        type: "clarityNode",
+        position: { x: 0, y: 600 },
         data: {
-          output,
-          showLeftHandle: true,
+          title: "Outcome",
+          value: data.outcome,
+          onChange: (val) => setData((prev) => ({ ...prev, outcome: val })),
+          evaluator: evaluateOutcomeClarity,
+          placeholder: "What successful outcome should happen?",
         },
       },
     ],
-    [nodes, output, updateNode, handleGenerate, isGenerating],
-  )
-  const testNodes: Node[] = useMemo(
-    () => [
-      {
-        id: "test",
-        type: "default",
-        position: { x: 100, y: 100 },
-        data: { label: "TEST NODE" },
-      },
-    ],
-    [],
+    [data],
   )
 
-  console.log("FLOW NODES:", flowNodes)
-
-  const flowEdges = useMemo<Edge[]>(
-    () => [
-      {
-        id: "input-problem",
-        source: "input",
-        target: "problem",
-        type: "smoothstep",
-        style: { stroke: nodes.input.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
-      },
-      {
-        id: "problem-user",
-        source: "problem",
-        target: "user",
-        type: "smoothstep",
-        style: { stroke: nodes.problem.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
-      },
-      {
-        id: "user-coreAction",
-        source: "user",
-        target: "coreAction",
-        type: "smoothstep",
-        style: { stroke: nodes.user.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
-      },
-      {
-        id: "coreAction-constraints",
-        source: "coreAction",
-        target: "constraints",
-        type: "smoothstep",
-        style: {
-          stroke: nodes.coreAction.trim() ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)",
-          strokeWidth: 1,
-        },
-      },
-      {
-        id: "constraints-output",
-        source: "constraints",
-        target: "output",
-        type: "smoothstep",
-        style: { stroke: hasAnyMiddleNode ? "oklch(0.556 0 0)" : "oklch(0.922 0 0)", strokeWidth: 1 },
-      },
-    ],
-    [nodes.input, nodes.problem, nodes.user, nodes.coreAction, hasAnyMiddleNode],
-  )
+  const generateBuildPrompt = () => {
+    const prompt = `Build a product for ${data.user}.\nThe main problem is: ${data.problem}.\nThe core action is: ${data.action}.\nConstraints: ${data.constraints}.\nSuccess outcome: ${data.outcome}.`
+    setBuildPrompt(prompt)
+  }
 
   return (
-    <main className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-border/60 px-6 py-4 flex items-center justify-between flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="text-base font-semibold tracking-tight text-foreground">Unblur</span>
-          <span className="hidden sm:block text-sm text-muted-foreground">
-            Turn messy thinking into structured clarity
-          </span>
-        </div>
-        <button
-          onClick={() => {
-            setNodes({ input: "", problem: "", user: "", coreAction: "", constraints: "" })
-            setHasGenerated(false)
-          }}
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Reset
-        </button>
-      </header>
+    <main className="min-h-screen p-4 md:p-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:flex-row lg:items-start">
+        <section className="w-full rounded-xl border bg-card p-2 shadow-sm lg:w-[380px]">
+          <div className="mb-2 px-2 pt-2">
+            <h1 className="text-base font-semibold tracking-tight">Unblur</h1>
+            <p className="text-xs text-muted-foreground">Structured convergence flow</p>
+          </div>
+          <div className="h-[760px] w-full">
+            <ReactFlow
+              nodes={nodes}
+              edges={[]}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.15 }}
+              nodesDraggable={false}
+              nodesConnectable={false}
+              elementsSelectable={false}
+              zoomOnDoubleClick={false}
+              panOnDrag={false}
+              zoomOnScroll={false}
+              preventScrolling={false}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Background gap={20} size={1} color="oklch(0.922 0 0)" />
+            </ReactFlow>
+          </div>
+        </section>
 
-      {/* Node canvas */}
-      <div className="w-screen h-screen">
-        <ReactFlow
-          nodes={flowNodes.length ? flowNodes : testNodes}
-          edges={flowNodes.length ? flowEdges : []}
-          nodeTypes={nodeTypes}
-          nodesDraggable
-          fitView
-          fitViewOptions={{ duration: 500, padding: 0.15 }}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          minZoom={0.6}
-          maxZoom={1.4}
-          zoomOnScroll
-          zoomOnPinch
-          zoomOnDoubleClick={false}
-          panOnDrag
-          panOnScroll
-          panOnScrollMode="free"
-          panOnScrollSpeed={0.75}
-          attributionPosition="bottom-left"
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background gap={20} size={1} color="oklch(0.922 0 0)" />
-        </ReactFlow>
+        <section className="w-full rounded-xl border bg-card p-4 shadow-sm lg:flex-1">
+          <h2 className="mb-3 text-sm font-semibold tracking-wide uppercase text-muted-foreground">Structured Output</h2>
+
+          <div className="space-y-4 text-sm text-foreground">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Product Definition</h3>
+              <p className="mt-1 leading-relaxed">
+                A {data.user || "[user]"} can {data.action || "[action]"} to achieve {data.outcome || "[outcome]"} while
+                addressing {data.problem || "[problem]"}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">User Flow</h3>
+              <ul className="mt-1 list-disc space-y-1 pl-5">
+                <li>Enter input</li>
+                <li>Refine thinking</li>
+                <li>Get structured clarity</li>
+              </ul>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Constraints</h3>
+              <p className={cn("mt-1 leading-relaxed", !data.constraints && "text-muted-foreground")}>
+                {data.constraints || "No constraints provided yet."}
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Failure Cases</h3>
+              <ul className="mt-1 list-disc space-y-1 pl-5">
+                <li>vague inputs</li>
+                <li>unclear problem</li>
+                <li>conflicting inputs</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-5 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={generateBuildPrompt}
+              className="rounded-lg bg-foreground px-3 py-2 text-sm font-medium text-background hover:opacity-90"
+            >
+              Generate Build Prompt
+            </button>
+
+            {buildPrompt && (
+              <pre className="mt-3 whitespace-pre-wrap rounded-lg bg-secondary/50 p-3 text-xs leading-relaxed text-foreground">
+                {buildPrompt}
+              </pre>
+            )}
+          </div>
+        </section>
       </div>
-
-      {/* Footer hint */}
-      <footer className="border-t border-border/40 px-6 py-3 flex items-center gap-4 flex-shrink-0">
-        <p className="text-xs text-muted-foreground">
-          Type in the Input node, click <strong>Generate</strong> to auto-fill the nodes, then edit freely. Output updates live.
-        </p>
-      </footer>
     </main>
   )
 }

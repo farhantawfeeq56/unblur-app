@@ -1,22 +1,13 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { cn } from "@/lib/utils"
-
-type ClarityState = "empty" | "weak" | "medium" | "strong"
-
-interface ClarityResult {
-  score: number
-  state: ClarityState
-  feedback: string
-}
+import { ClarityNode, type ClarityResult } from "@/components/clarity-node"
 
 const GENERIC_WORDS = ["people", "users", "everyone", "anyone"]
 const SLIGHTLY_SPECIFIC_WORDS = ["student", "students", "developer", "developers", "designer", "designers", "founder", "founders"]
 const ROLE_WORDS = ["founder", "founders", "developer", "developers", "designer", "designers", "student", "students"]
 const QUALIFIER_WORDS = ["saas", "ai", "early", "stage", "b2b"]
 
-const SUGGESTIONS = [
+export const USER_SUGGESTIONS = [
   "SaaS founders (B2B tools)",
   "Indie hackers building solo products",
   "AI startup founders (early-stage)",
@@ -82,50 +73,22 @@ export function evaluateUserClarity(text: string): ClarityResult {
   }
 }
 
-const stateStyles: Record<ClarityState, string> = {
-  empty: "border-border text-muted-foreground",
-  weak: "border-red-400 text-red-600",
-  medium: "border-amber-400 text-amber-600",
-  strong: "border-emerald-400 text-emerald-600",
+interface UserClarityNodeProps {
+  value: string
+  onChange: (value: string) => void
 }
 
-export function UserClarityNode() {
-  const [value, setValue] = useState("")
-  const result = useMemo(() => evaluateUserClarity(value), [value])
-
+export function UserClarityNode({ value, onChange }: UserClarityNodeProps) {
   return (
-    <div className="flex flex-col gap-3 max-w-md w-full">
-      <div className={cn("rounded-xl border bg-card p-4 shadow-sm", stateStyles[result.state])}>
-        <div className="mb-2 flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold tracking-wide uppercase">User</h2>
-          <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", stateStyles[result.state])}>
-            {result.score}%
-          </span>
-        </div>
-
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Describe your target user..."
-          className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
-
-        <p className="mt-2 text-xs">{result.feedback}</p>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {SUGGESTIONS.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => setValue(suggestion)}
-              className="rounded-full border border-border px-2.5 py-1 text-xs text-foreground hover:bg-secondary"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      </div>
-
+    <div className="max-w-md w-full">
+      <ClarityNode
+        title="User"
+        value={value}
+        onChange={onChange}
+        evaluator={evaluateUserClarity}
+        suggestions={USER_SUGGESTIONS}
+        placeholder="Describe your target user..."
+      />
     </div>
   )
 }
