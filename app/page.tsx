@@ -288,7 +288,7 @@ export default function UnblurPage() {
     <main className="h-screen w-screen overflow-hidden bg-muted/20">
       <div className="flex h-full w-full min-w-[1200px] flex-col overflow-hidden">
         <header className="shrink-0 px-4 py-3">
-          <h1 className="text-lg font-semibold tracking-tight">Unblur</h1>
+          <h1 className="text-lg font-semibold tracking-tight">Unblurr</h1>
         </header>
 
         <div className="h-full w-full flex-1">
