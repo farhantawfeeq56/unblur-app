@@ -2,14 +2,7 @@
 
 import { Handle, Position } from "reactflow"
 import { cn } from "@/lib/utils"
-
-interface UnblurData {
-  user: string
-  problem: string
-  action: string
-  constraints: string
-  outcome: string
-}
+import { UnblurData } from "@/lib/types"
 
 interface OutputNodeProps {
   data: UnblurData

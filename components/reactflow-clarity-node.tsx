@@ -1,24 +1,22 @@
 "use client"
 
 import type { NodeProps } from "reactflow"
-import { ClarityNode, type ClarityResult } from "@/components/clarity-node"
+import { ClarityNode } from "@/components/clarity-node"
+import { useUnblurData } from "@/components/data-context"
+import { ClarityNodeData, UnblurData } from "@/lib/types"
 
-type ClarityNodeData = {
-  title: string
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  evaluator?: (value: string) => ClarityResult
-  suggestions?: string[]
-}
+export function ReactFlowClarityNode({ id, data }: NodeProps<ClarityNodeData>) {
+  const { data: unblurData, onFieldChange } = useUnblurData()
 
-export function ReactFlowClarityNode({ data }: NodeProps<ClarityNodeData>) {
+  const field = id as keyof UnblurData
+  const value = unblurData[field] || ""
+
   return (
     <div className="w-[320px]">
       <ClarityNode
         title={data.title}
-        value={data.value}
-        onChange={data.onChange}
+        value={value}
+        onChange={(val) => onFieldChange(field, val)}
         placeholder={data.placeholder}
         evaluator={data.evaluator}
         suggestions={data.suggestions}

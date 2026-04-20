@@ -3,14 +3,7 @@
 import { useMemo } from "react"
 import { Handle, Position } from "reactflow"
 import { cn } from "@/lib/utils"
-
-export type ClarityState = "empty" | "weak" | "medium" | "strong"
-
-export interface ClarityResult {
-  score: number
-  state: ClarityState
-  feedback: string
-}
+import { ClarityState, ClarityResult } from "@/lib/types"
 
 interface ClarityNodeProps {
   title: string
