@@ -35,7 +35,7 @@ export function OutputNode({ data }: OutputNodeProps) {
 
   return (
     <div className={cn("relative flex w-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm", "min-w-[320px]")}>
-      <Handle type="target" position={Position.Left} />
+      <Handle type="target" position={Position.Top} />
 
       <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground select-none">Output</div>
 
