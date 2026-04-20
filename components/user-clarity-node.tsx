@@ -2,14 +2,7 @@
 
 import { useMemo } from "react"
 import { cn } from "@/lib/utils"
-
-type ClarityState = "empty" | "weak" | "medium" | "strong"
-
-interface ClarityResult {
-  score: number
-  state: ClarityState
-  feedback: string
-}
+import { ClarityState, ClarityResult } from "@/lib/types"
 
 const GENERIC_WORDS = ["people", "users", "everyone", "anyone"]
 const SLIGHTLY_SPECIFIC_WORDS = ["student", "students", "developer", "developers", "designer", "designers", "founder", "founders"]
