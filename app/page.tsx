@@ -26,11 +26,11 @@ const OUTPUT_NODE_WIDTH = 420
 
 const yById = {
   user: 0,
-  problem: 160,
-  action: 320,
-  constraints: 480,
-  outcome: 640,
-  output: 900,
+  problem: 0,
+  action: 0,
+  constraints: 0,
+  outcome: 0,
+  output: 600,
 } as const
 
 const getNodeX = (id: string, totalWidth: number) => {
@@ -66,11 +66,13 @@ const nodeTypes = {
   outputNode: ReactFlowOutputNode,
 }
 
+const LAYOUT_WIDTH = 2000
+
 const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "user",
     type: "clarityNode",
-    position: { x: getNodeX("user", 1200), y: yById.user },
+    position: { x: getNodeX("user", LAYOUT_WIDTH), y: yById.user },
     data: {
       title: "User",
       value: "",
@@ -83,7 +85,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "problem",
     type: "clarityNode",
-    position: { x: getNodeX("problem", 1200), y: yById.problem },
+    position: { x: getNodeX("problem", LAYOUT_WIDTH), y: yById.problem },
     data: {
       title: "Problem",
       value: "",
@@ -95,7 +97,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "action",
     type: "clarityNode",
-    position: { x: getNodeX("action", 1200), y: yById.action },
+    position: { x: getNodeX("action", LAYOUT_WIDTH), y: yById.action },
     data: {
       title: "Core Action",
       value: "",
@@ -107,7 +109,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "constraints",
     type: "clarityNode",
-    position: { x: getNodeX("constraints", 1200), y: yById.constraints },
+    position: { x: getNodeX("constraints", LAYOUT_WIDTH), y: yById.constraints },
     data: {
       title: "Constraints",
       value: "",
@@ -119,7 +121,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "outcome",
     type: "clarityNode",
-    position: { x: getNodeX("outcome", 1200), y: yById.outcome },
+    position: { x: getNodeX("outcome", LAYOUT_WIDTH), y: yById.outcome },
     data: {
       title: "Outcome",
       value: "",
@@ -131,7 +133,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "output",
     type: "outputNode",
-    position: { x: getNodeX("output", 1200), y: yById.output },
+    position: { x: getNodeX("output", LAYOUT_WIDTH), y: yById.output },
     data: { data: { user: "", problem: "", action: "", constraints: "", outcome: "" } },
   },
 ]
@@ -149,22 +151,23 @@ function UnblurCanvas() {
   )
 
   const alignNodes = useCallback(() => {
-    const width = typeof window !== "undefined" ? Math.max(1200, window.innerWidth) : 1200
     setNodes((nds) =>
       nds.map((node) => ({
         ...node,
         position: {
-          x: getNodeX(node.id, width),
+          x: getNodeX(node.id, LAYOUT_WIDTH),
           y: yById[node.id as keyof typeof yById] ?? node.position.y,
         },
       }))
     )
+    // Small delay to ensure React Flow has updated node positions before fitting view
     setTimeout(() => fitView({ duration: 400, padding: 0.3 }), 50)
   }, [setNodes, fitView])
 
   useEffect(() => {
     alignNodes()
-  }, [alignNodes])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return (
     <div className="flex h-full w-full min-w-[1200px] flex-col overflow-hidden">
