@@ -33,8 +33,8 @@ export function ClarityNode({ title, value, onChange, placeholder, evaluator, su
 
   return (
     <div className="relative w-full rounded-xl border bg-card p-4 shadow-sm">
-      <Handle type="target" position={Position.Left} />
-      <Handle type="source" position={Position.Right} />
+      <Handle type="target" position={Position.Top} />
+      <Handle type="source" position={Position.Bottom} />
 
       <div className="mb-2 flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-wide uppercase text-muted-foreground">{title}</h2>
