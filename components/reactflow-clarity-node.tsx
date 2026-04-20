@@ -14,7 +14,7 @@ type ClarityNodeData = {
 
 export function ReactFlowClarityNode({ data }: NodeProps<ClarityNodeData>) {
   return (
-    <div className="w-[520px]">
+    <div className="w-[320px]">
       <ClarityNode
         title={data.title}
         value={data.value}

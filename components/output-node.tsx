@@ -1,111 +1,86 @@
 "use client"
 
-import { useState } from "react"
+import { Handle, Position } from "reactflow"
 import { cn } from "@/lib/utils"
 
-interface OutputData {
-  productSummary: string
-  userFlow: { step: string; description: string }[]
-  buildPrompt: string
+interface UnblurData {
+  user: string
+  problem: string
+  action: string
+  constraints: string
+  outcome: string
 }
 
 interface OutputNodeProps {
-  output: OutputData | null
+  data: UnblurData
 }
 
-export function OutputNode({ output }: OutputNodeProps) {
-  const [copied, setCopied] = useState(false)
+const fallback = {
+  user: "user",
+  problem: "problem",
+  action: "take action",
+  constraints: "constraints",
+  outcome: "an outcome",
+}
 
-  const handleCopy = async () => {
-    if (!output) return
-    const text = [
-      "PRODUCT SUMMARY",
-      output.productSummary,
-      "",
-      "USER FLOW",
-      ...output.userFlow.map((s) => `${s.step}: ${s.description}`),
-      "",
-      "BUILD PROMPT",
-      output.buildPrompt,
-    ].join("\n")
-    await navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+export function OutputNode({ data }: OutputNodeProps) {
+  const user = data.user || fallback.user
+  const problem = data.problem || fallback.problem
+  const action = data.action || fallback.action
+  const constraints = data.constraints || fallback.constraints
+  const outcome = data.outcome || fallback.outcome
+
+  const productStatement = `A ${user} can ${action} to achieve ${outcome} while addressing ${problem}`
+  const buildPrompt = `Build a clarity-focused product concept for ${user}.\nProblem to solve: ${problem}.\nCore action: ${action}.\nDesired outcome: ${outcome}.\nConstraints: ${constraints}.\nGenerate a concise plan with assumptions, flow, and risks.`
 
   return (
-    <div
-      className={cn(
-        "relative flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm",
-        "min-w-[260px] max-w-[320px] w-full",
-        output ? "border-foreground/20" : "border-dashed",
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground select-none">
-          Output
-        </span>
-        {output && (
-          <button
-            onClick={handleCopy}
-            className="nodrag text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {copied ? "Copied" : "Copy"}
-          </button>
-        )}
-      </div>
+    <div className={cn("relative flex w-full flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm", "min-w-[320px]")}>
+      <Handle type="target" position={Position.Left} />
 
-      {!output ? (
-        <p className="text-sm text-muted-foreground/50 leading-relaxed">
-          Fill in the nodes and click Generate to see your product summary here.
-        </p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {/* Product Summary */}
-          <section className="flex flex-col gap-1">
-            <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-              Product Summary
-            </h3>
-            <p className="text-sm text-foreground leading-relaxed">{output.productSummary}</p>
-          </section>
+      <div className="text-[11px] font-semibold tracking-wider uppercase text-muted-foreground select-none">Output</div>
 
-          {/* Divider */}
-          <div className="h-px bg-border" />
+      <section className="flex flex-col gap-1">
+        <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Product Statement</h3>
+        <p className="text-sm leading-relaxed text-foreground">{productStatement}</p>
+      </section>
 
-          {/* User Flow */}
-          <section className="flex flex-col gap-2">
-            <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-              User Flow
-            </h3>
-            <ol className="flex flex-col gap-1.5">
-              {output.userFlow.map((s, i) => (
-                <li key={i} className="flex gap-2 text-sm">
-                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
-                    {i + 1}
-                  </span>
-                  <span className="text-foreground leading-relaxed">
-                    <span className="font-medium">{s.step}:</span> {s.description}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </section>
+      <div className="h-px bg-border" />
 
-          {/* Divider */}
-          <div className="h-px bg-border" />
+      <section className="flex flex-col gap-2">
+        <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">User Flow</h3>
+        <ol className="list-decimal space-y-1 pl-4 text-sm leading-relaxed text-foreground">
+          <li>Enter idea</li>
+          <li>Refine inputs</li>
+          <li>Get structured clarity</li>
+        </ol>
+      </section>
 
-          {/* Build Prompt */}
-          <section className="flex flex-col gap-1">
-            <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-              Build Prompt
-            </h3>
-            <pre className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap font-mono bg-secondary/50 rounded-lg p-3">
-              {output.buildPrompt}
-            </pre>
-          </section>
-        </div>
-      )}
+      <div className="h-px bg-border" />
+
+      <section className="flex flex-col gap-1">
+        <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Constraints</h3>
+        <p className="text-sm leading-relaxed text-foreground">{constraints}</p>
+      </section>
+
+      <div className="h-px bg-border" />
+
+      <section className="flex flex-col gap-1">
+        <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Failure Cases</h3>
+        <ul className="list-disc space-y-1 pl-4 text-sm leading-relaxed text-foreground">
+          <li>vague inputs</li>
+          <li>unclear problem</li>
+          <li>conflicting inputs</li>
+        </ul>
+      </section>
+
+      <div className="h-px bg-border" />
+
+      <section className="flex flex-col gap-1">
+        <h3 className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Build Prompt</h3>
+        <pre className="rounded-lg bg-secondary/50 p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap text-foreground">
+          {buildPrompt}
+        </pre>
+      </section>
     </div>
   )
 }
