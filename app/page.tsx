@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useEffect } from "react"
 import ReactFlow, { 
   Background, 
   type Edge, 
@@ -20,7 +20,10 @@ import { CanvasNodeData } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Sparkles } from "lucide-react"
 
-const CENTER_X = 400
+const INPUT_NODES = ["user", "problem", "action", "constraints", "outcome"]
+const CLARITY_NODE_WIDTH = 320
+const OUTPUT_NODE_WIDTH = 420
+
 const yById = {
   user: 0,
   problem: 160,
@@ -29,6 +32,17 @@ const yById = {
   outcome: 640,
   output: 900,
 } as const
+
+const getNodeX = (id: string, totalWidth: number) => {
+  const inputIndex = INPUT_NODES.indexOf(id)
+  if (inputIndex !== -1) {
+    return (inputIndex * (totalWidth - CLARITY_NODE_WIDTH)) / 4
+  }
+  if (id === "output") {
+    return (totalWidth - OUTPUT_NODE_WIDTH) / 2
+  }
+  return 0
+}
 
 const initialEdges: Edge[] = [
   { id: "e-user-output", source: "user", target: "output" },
@@ -56,7 +70,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "user",
     type: "clarityNode",
-    position: { x: CENTER_X, y: yById.user },
+    position: { x: getNodeX("user", 1200), y: yById.user },
     data: {
       title: "User",
       value: "",
@@ -69,7 +83,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "problem",
     type: "clarityNode",
-    position: { x: CENTER_X, y: yById.problem },
+    position: { x: getNodeX("problem", 1200), y: yById.problem },
     data: {
       title: "Problem",
       value: "",
@@ -81,7 +95,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "action",
     type: "clarityNode",
-    position: { x: CENTER_X, y: yById.action },
+    position: { x: getNodeX("action", 1200), y: yById.action },
     data: {
       title: "Core Action",
       value: "",
@@ -93,7 +107,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "constraints",
     type: "clarityNode",
-    position: { x: CENTER_X, y: yById.constraints },
+    position: { x: getNodeX("constraints", 1200), y: yById.constraints },
     data: {
       title: "Constraints",
       value: "",
@@ -105,7 +119,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "outcome",
     type: "clarityNode",
-    position: { x: CENTER_X, y: yById.outcome },
+    position: { x: getNodeX("outcome", 1200), y: yById.outcome },
     data: {
       title: "Outcome",
       value: "",
@@ -117,7 +131,7 @@ const initialNodes: Node<CanvasNodeData>[] = [
   {
     id: "output",
     type: "outputNode",
-    position: { x: CENTER_X, y: yById.output },
+    position: { x: getNodeX("output", 1200), y: yById.output },
     data: { data: { user: "", problem: "", action: "", constraints: "", outcome: "" } },
   },
 ]
@@ -135,17 +149,22 @@ function UnblurCanvas() {
   )
 
   const alignNodes = useCallback(() => {
+    const width = typeof window !== "undefined" ? Math.max(1200, window.innerWidth) : 1200
     setNodes((nds) =>
       nds.map((node) => ({
         ...node,
         position: {
-          x: CENTER_X,
+          x: getNodeX(node.id, width),
           y: yById[node.id as keyof typeof yById] ?? node.position.y,
         },
       }))
     )
     setTimeout(() => fitView({ duration: 400, padding: 0.3 }), 50)
   }, [setNodes, fitView])
+
+  useEffect(() => {
+    alignNodes()
+  }, [alignNodes])
 
   return (
     <div className="flex h-full w-full min-w-[1200px] flex-col overflow-hidden">
