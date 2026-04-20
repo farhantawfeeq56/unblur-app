@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { cn } from "@/lib/utils"
 
 type ClarityState = "empty" | "weak" | "medium" | "strong"
@@ -89,8 +89,12 @@ const stateStyles: Record<ClarityState, string> = {
   strong: "border-emerald-400 text-emerald-600",
 }
 
-export function UserClarityNode() {
-  const [value, setValue] = useState("")
+interface UserClarityNodeProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+export function UserClarityNode({ value, onChange }: UserClarityNodeProps) {
   const result = useMemo(() => evaluateUserClarity(value), [value])
 
   return (
@@ -105,7 +109,7 @@ export function UserClarityNode() {
 
         <textarea
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           placeholder="Describe your target user..."
           className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
@@ -117,7 +121,7 @@ export function UserClarityNode() {
             <button
               key={suggestion}
               type="button"
-              onClick={() => setValue(suggestion)}
+              onClick={() => onChange(suggestion)}
               className="rounded-full border border-border px-2.5 py-1 text-xs text-foreground hover:bg-secondary"
             >
               {suggestion}
