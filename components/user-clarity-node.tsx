@@ -16,7 +16,7 @@ const SLIGHTLY_SPECIFIC_WORDS = ["student", "students", "developer", "developers
 const ROLE_WORDS = ["founder", "founders", "developer", "developers", "designer", "designers", "student", "students"]
 const QUALIFIER_WORDS = ["saas", "ai", "early", "stage", "b2b"]
 
-const SUGGESTIONS = [
+export const USER_SUGGESTIONS = [
   "SaaS founders (B2B tools)",
   "Indie hackers building solo products",
   "AI startup founders (early-stage)",
@@ -117,7 +117,7 @@ export function UserClarityNode({ value, onChange }: UserClarityNodeProps) {
         <p className="mt-2 text-xs">{result.feedback}</p>
 
         <div className="mt-3 flex flex-wrap gap-2">
-          {SUGGESTIONS.map((suggestion) => (
+          {USER_SUGGESTIONS.map((suggestion) => (
             <button
               key={suggestion}
               type="button"

@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { UserClarityNode } from "@/components/user-clarity-node"
+import { useMemo, useState } from "react"
+import ReactFlow, { type Node } from "reactflow"
+import { ReactFlowClarityNode } from "@/components/reactflow-clarity-node"
+import { evaluateUserClarity, USER_SUGGESTIONS } from "@/components/user-clarity-node"
 import { cn } from "@/lib/utils"
 
 interface UnblurData {
@@ -12,28 +14,17 @@ interface UnblurData {
   outcome: string
 }
 
-function PlaceholderNode({
-  title,
-  value,
-  onChange,
-  placeholder,
-}: {
+type ClarityNodeData = {
   title: string
   value: string
   onChange: (value: string) => void
   placeholder: string
-}) {
-  return (
-    <div className="w-full rounded-xl border bg-card p-4 shadow-sm">
-      <h2 className="mb-2 text-sm font-semibold tracking-wide uppercase text-muted-foreground">{title}</h2>
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="min-h-24 w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-      />
-    </div>
-  )
+  evaluator?: (value: string) => { score: number; state: "empty" | "weak" | "medium" | "strong"; feedback: string }
+  suggestions?: string[]
+}
+
+const nodeTypes = {
+  clarityNode: ReactFlowClarityNode,
 }
 
 export default function UnblurPage() {
@@ -45,6 +36,73 @@ export default function UnblurPage() {
     outcome: "",
   })
   const [buildPrompt, setBuildPrompt] = useState("")
+
+  const nodes = useMemo<Node<ClarityNodeData>[]>(
+    () => [
+      {
+        id: "user",
+        type: "clarityNode",
+        position: { x: 0, y: 0 },
+        data: {
+          title: "User",
+          value: data.user,
+          onChange: (val) => setData((prev) => ({ ...prev, user: val })),
+          placeholder: "Describe your target user...",
+          evaluator: evaluateUserClarity,
+          suggestions: USER_SUGGESTIONS,
+        },
+      },
+      {
+        id: "problem",
+        type: "clarityNode",
+        position: { x: 0, y: 150 },
+        data: {
+          title: "Problem",
+          value: data.problem,
+          onChange: (val) => setData((prev) => ({ ...prev, problem: val })),
+          placeholder: "Define the core problem...",
+          suggestions: [],
+        },
+      },
+      {
+        id: "action",
+        type: "clarityNode",
+        position: { x: 0, y: 300 },
+        data: {
+          title: "Core Action",
+          value: data.action,
+          onChange: (val) => setData((prev) => ({ ...prev, action: val })),
+          placeholder: "What does the user need to do?",
+          suggestions: [],
+        },
+      },
+      {
+        id: "constraints",
+        type: "clarityNode",
+        position: { x: 0, y: 450 },
+        data: {
+          title: "Constraints",
+          value: data.constraints,
+          onChange: (val) => setData((prev) => ({ ...prev, constraints: val })),
+          placeholder: "What constraints should this solution follow?",
+          suggestions: [],
+        },
+      },
+      {
+        id: "outcome",
+        type: "clarityNode",
+        position: { x: 0, y: 600 },
+        data: {
+          title: "Outcome",
+          value: data.outcome,
+          onChange: (val) => setData((prev) => ({ ...prev, outcome: val })),
+          placeholder: "What successful outcome should happen?",
+          suggestions: [],
+        },
+      },
+    ],
+    [data],
+  )
 
   const generateBuildPrompt = () => {
     const prompt = `Build a product for ${data.user}.\nThe main problem is: ${data.problem}.\nThe core action is: ${data.action}.\nConstraints: ${data.constraints}.\nSuccess outcome: ${data.outcome}.`
@@ -59,38 +117,22 @@ export default function UnblurPage() {
           <p className="text-sm text-muted-foreground">Inputs → processed → structured clarity output</p>
         </header>
 
-        <UserClarityNode
-          value={data.user}
-          onChange={(val) => setData((prev) => ({ ...prev, user: val }))}
-        />
-
-        <PlaceholderNode
-          title="Problem"
-          value={data.problem}
-          onChange={(val) => setData((prev) => ({ ...prev, problem: val }))}
-          placeholder="Define the core problem..."
-        />
-
-        <PlaceholderNode
-          title="Core Action"
-          value={data.action}
-          onChange={(val) => setData((prev) => ({ ...prev, action: val }))}
-          placeholder="What does the user need to do?"
-        />
-
-        <PlaceholderNode
-          title="Constraints"
-          value={data.constraints}
-          onChange={(val) => setData((prev) => ({ ...prev, constraints: val }))}
-          placeholder="What constraints should this solution follow?"
-        />
-
-        <PlaceholderNode
-          title="Outcome"
-          value={data.outcome}
-          onChange={(val) => setData((prev) => ({ ...prev, outcome: val }))}
-          placeholder="What successful outcome should happen?"
-        />
+        <section className="h-[780px] w-full overflow-hidden rounded-xl border bg-card">
+          <ReactFlow
+            nodes={nodes}
+            edges={[]}
+            nodeTypes={nodeTypes}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            fitView
+            fitViewOptions={{ padding: 0.15 }}
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
+            panOnDrag={false}
+          />
+        </section>
 
         <section className="w-full rounded-xl border bg-card p-4 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold tracking-wide uppercase text-muted-foreground">Structured Output</h2>
