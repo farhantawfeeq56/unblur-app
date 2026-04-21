@@ -25,7 +25,7 @@ export function ClarityNode({ title, value, onChange, placeholder, evaluator, su
   const result = useMemo(() => evaluator?.(value), [evaluator, value])
 
   return (
-    <div className="relative w-full rounded-xl border bg-card p-4 shadow-sm">
+    <div className="relative w-full rounded-xl border bg-card p-4">
       <Handle type="target" position={Position.Top} />
       <Handle type="source" position={Position.Bottom} />
 
