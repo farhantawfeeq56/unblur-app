@@ -21,9 +21,23 @@ const stateStyles: Record<ClarityState, string> = {
   strong: "border-emerald-400 text-emerald-600",
 }
 
-const VAGUE_WORDS = ["people", "users", "everyone", "anyone", "something", "stuff", "things", "someone", "maybe", "kind of", "sort of", "etc", "various", "many"];
-const SPECIFIC_WORDS = ["student", "students", "developer", "developers", "designer", "designers", "founder", "founders", "engineer", "engineers", "manager", "managers", "builder", "builders"];
-const QUALIFIER_WORDS = ["saas", "ai", "early", "stage", "b2b", "b2c", "mobile", "web", "startup"];
+const VAGUE_WORDS = [
+  "something",
+  "stuff",
+  "things",
+  "people",
+  "users",
+  "everyone",
+  "anyone",
+  "someone",
+  "maybe",
+  "kind of",
+  "sort of",
+  "etc",
+  "and so on",
+  "various",
+  "many",
+];
 
 function escapeHtml(text: string) {
   return text
@@ -37,21 +51,12 @@ function escapeHtml(text: string) {
 function highlight(text: string) {
   if (!text) return ""
   
-  const rules = [
-    { list: VAGUE_WORDS, class: "text-red-500 bg-red-500/10 px-0.5 rounded" },
-    { list: SPECIFIC_WORDS, class: "text-emerald-500 bg-emerald-500/10 px-0.5 rounded" },
-    { list: QUALIFIER_WORDS, class: "text-blue-500 bg-blue-500/10 px-0.5 rounded" },
-  ]
-
-  const allPatterns = Array.from(new Set(rules.flatMap(r => r.list))).sort((a, b) => b.length - a.length)
-  const regex = new RegExp(`\\b(${allPatterns.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi')
+  const regex = new RegExp(`\\b(${VAGUE_WORDS.map(p => p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'gi')
   
   const parts = text.split(regex)
   return parts.map((part, i) => {
     if (i % 2 === 0) return escapeHtml(part)
-    const lower = part.toLowerCase()
-    const rule = rules.find(r => r.list.includes(lower))
-    return `<span class="${rule ? rule.class : ""}" data-highlight="true">${escapeHtml(part)}</span>`
+    return `<span class="underline decoration-amber-400/60 underline-offset-4" data-highlight="true">${escapeHtml(part)}</span>`
   }).join('')
 }
 
@@ -112,6 +117,7 @@ export function ClarityNode({ title, value, onChange, placeholder, evaluator, su
     if (!editorRef.current) return
 
     const highlightedHtml = highlight(value)
+    // Check innerHTML but also handle empty case for placeholder
     if (editorRef.current.innerHTML !== highlightedHtml) {
       const offset = getCaretOffset(editorRef.current)
       editorRef.current.innerHTML = highlightedHtml
