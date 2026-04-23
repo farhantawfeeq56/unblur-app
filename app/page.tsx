@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo, useEffect } from "react"
+import { useCallback, useMemo, useEffect, useState } from "react"
 import ReactFlow, { 
   Background, 
   type Edge, 
@@ -19,7 +19,8 @@ import { evaluateUserClarity, USER_SUGGESTIONS } from "@/components/user-clarity
 import { DataProvider } from "@/components/data-context"
 import { CanvasNodeData } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { Maximize } from "lucide-react"
+import { Maximize, Settings2 } from "lucide-react"
+import { SetupOverlay, type WarehouseConfig } from "@/components/setup-overlay"
 
 const INPUT_NODES = ["user", "problem", "action", "constraints", "outcome"]
 const CLARITY_NODE_WIDTH = 320
@@ -147,6 +148,23 @@ function UnblurCanvas() {
   const { fitView } = useReactFlow()
   const { zoom } = useViewport()
 
+  const [isSetupOpen, setIsSetupOpen] = useState(false)
+  const [config, setConfig] = useState<WarehouseConfig | null>(null)
+
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('warehouse-config')
+    if (!savedConfig) {
+      setIsSetupOpen(true)
+    } else {
+      setConfig(JSON.parse(savedConfig))
+    }
+  }, [])
+
+  const handleSetupComplete = useCallback((newConfig: WarehouseConfig) => {
+    setConfig(newConfig)
+    setIsSetupOpen(false)
+  }, [])
+
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       onNodesChange(changes)
@@ -193,18 +211,37 @@ function UnblurCanvas() {
       style={visualStyle}
     >
       <header className="flex shrink-0 items-center justify-between px-6 py-4 bg-background/50 backdrop-blur-md border-b">
-        <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Unblurr
-        </h1>
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleResetView}
-          className="gap-2 shadow-sm hover:shadow-md transition-all"
-        >
-          <Maximize className="h-4 w-4" />
-          Reset View
-        </Button>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+            Unblurr
+          </h1>
+          {config && (
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-muted/50 rounded-full border text-[11px] font-medium text-muted-foreground">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              {config.layout} • {config.density}% Density
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setIsSetupOpen(true)}
+            className="gap-2 shadow-sm hover:shadow-md transition-all"
+          >
+            <Settings2 className="h-4 w-4" />
+            Change Layout
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleResetView}
+            className="gap-2 shadow-sm hover:shadow-md transition-all"
+          >
+            <Maximize className="h-4 w-4" />
+            Reset View
+          </Button>
+        </div>
       </header>
 
       <div className="h-full w-full flex-1">
@@ -234,6 +271,12 @@ function UnblurCanvas() {
           <Background gap={24} size={1} color="hsl(var(--border))" />
         </ReactFlow>
       </div>
+
+      <SetupOverlay 
+        isOpen={isSetupOpen} 
+        onComplete={handleSetupComplete} 
+        onClose={config ? () => setIsSetupOpen(false) : undefined}
+      />
     </div>
   )
 }
